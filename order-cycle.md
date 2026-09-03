@@ -10,12 +10,12 @@
 
 | Main state | Sub-states | Description |
 |---|---|---|
-| **Processing** | New, Printed, Pattern Done, Measurement Attention | Order placed and invoice created. All pre-shipment operations happen here. |
+| **Processing** | New, Printed, Pattern Done, Measurement Attention, Returned, Return Accepted, Return Rejected | Order placed and invoice created. All pre-shipment operations and returns happen here. |
 | **Complete** | Shipped / Partially Shipped, Received In Branch, Delivered / Partially Delivered | Order has left processing. One-way — the order header never returns to Processing. |
-| **Return** | — | Customer returned the order or an item. Reachable only after shipment. |
-| **Closed** | — | Terminal state. Sub-status is either **Cancelled** or **Refunded**. |
+| **Closed** | Canceled, Refunded | Terminal state. |
 
 > **Measurement Attention is not a sequential step.** It is an exception branch reachable from Printed or Pattern Done that always loops back to New. See section 3.
+> **Return states are sub-states under Processing.** Returned, Return Accepted, and Return Rejected represent the return lifecycle within the Processing main state.
 
 ---
 
@@ -83,10 +83,10 @@ The header reads **Partially** while any item is still outstanding, and resolves
 Once an *item* reaches any Complete sub-state, that item can never move back to Processing — including for measurement issues. The order header likewise never reverts from Complete to Processing. Items not yet shipped are unaffected and continue through Processing normally.
 
 **BR-2 — Return requires prior shipment.**
-A Return can only be accepted once the order has shipped. It is a forward transition out of Complete into a separate branch, not backward movement, and does not violate BR-1.
+A Return can only be initiated once the order has shipped (Received In Branch or Delivered states). Return Accepted leads to Closed/Refunded. Return Rejected leads to Closed/Canceled.
 
 **BR-3 — Closed is reachable from any state.**
-Cancelling an order or refunding it moves it to Closed with sub-status **Cancelled** or **Refunded** respectively. This applies from both Processing and Complete.
+Cancelling an order or refunding it moves it to Closed with sub-status **Canceled** or **Refunded** respectively. This applies from both Processing and Complete.
 
 **BR-4 — Fabric Consumption is status-neutral.**
 Recorded for reporting only; never changes order status.
@@ -102,22 +102,16 @@ Recorded for reporting only; never changes order status.
 | Pattern Done | Shipped / Partially Shipped, Measurement Attention, Closed |
 | Measurement Attention | New |
 | Shipped / Partially Shipped | Received In Branch, Closed |
-| Received In Branch | Delivered / Partially Delivered, Return, Closed |
-| Delivered / Partially Delivered | Return, Closed |
-| Return | *See Q1* |
+| Received In Branch | Delivered / Partially Delivered, Returned, Closed |
+| Delivered / Partially Delivered | Returned, Closed |
+| Returned | Return Accepted, Return Rejected |
+| Return Accepted | Closed (Refunded) |
+| Return Rejected | Closed (Canceled) |
 | Closed | — (terminal) |
 
 ---
 
-## 7. Open question
-
-| # | Question | Why it matters |
-|---|---|---|
-| Q1 | Is **Return** terminal, or does it move to **Closed / Refunded** once the refund is processed? | BR-3 says a refund sends an order to Closed, and returns normally end in a refund — which suggests Return → Closed. But if Return is meant to be terminal, the refund path needs its own rule. The transition matrix cannot be finalised until this is settled. |
-
----
-
-## 8. Terminology
+## 7. Terminology
 
 Use these exact terms throughout the codebase and UI:
 
