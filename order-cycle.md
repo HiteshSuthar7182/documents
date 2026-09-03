@@ -19,7 +19,78 @@
 
 ---
 
-## 2. Happy path
+## 2. State diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> New
+    
+    New --> Printed
+    New --> Closed_Canceled1["Closed (Canceled)"]
+    
+    Printed --> PatternDone["Pattern Done"]
+    Printed --> MeasurementAttention["Measurement Attention"]
+    Printed --> Closed_Canceled2["Closed (Canceled)"]
+    
+    MeasurementAttention --> New
+    
+    PatternDone --> Shipped["Shipped / Partially Shipped"]
+    PatternDone --> MeasurementAttention
+    PatternDone --> Closed_Canceled3["Closed (Canceled)"]
+    
+    Shipped --> ReceivedInBranch["Received In Branch"]
+    Shipped --> Closed_Canceled4["Closed (Canceled)"]
+    
+    ReceivedInBranch --> Delivered["Delivered / Partially Delivered"]
+    ReceivedInBranch --> Returned
+    ReceivedInBranch --> Closed_Canceled5["Closed (Canceled)"]
+    
+    Delivered --> Returned
+    Delivered --> Closed_Canceled6["Closed (Canceled)"]
+    
+    Returned --> ReturnAccepted["Return Accepted"]
+    Returned --> ReturnRejected["Return Rejected"]
+    
+    ReturnAccepted --> Closed_Refunded["Closed (Refunded)"]
+    ReturnRejected --> Closed_Canceled7["Closed (Canceled)"]
+    
+    Closed_Canceled1 --> [*]
+    Closed_Canceled2 --> [*]
+    Closed_Canceled3 --> [*]
+    Closed_Canceled4 --> [*]
+    Closed_Canceled5 --> [*]
+    Closed_Canceled6 --> [*]
+    Closed_Canceled7 --> [*]
+    Closed_Refunded --> [*]
+    
+    note right of New
+        Processing
+    end note
+    
+    note right of PatternDone
+        Processing
+    end note
+    
+    note right of Shipped
+        Complete
+    end note
+    
+    note right of Delivered
+        Complete
+    end note
+    
+    note right of Returned
+        Processing (Return)
+    end note
+    
+    note right of Closed_Refunded
+        Closed (Terminal)
+    end note
+```
+
+---
+
+## 3. Happy path
 
 ```
 New → Printed → Pattern Done → Shipped / Partially Shipped
@@ -39,7 +110,7 @@ New → Printed → Pattern Done → Shipped / Partially Shipped
 
 ---
 
-## 3. Exception flow — Measurement Attention
+## 4. Exception flow — Measurement Attention
 
 **Entry condition:** the order is in **Printed** or **Pattern Done**.
 
@@ -58,7 +129,7 @@ New → Printed → Pattern Done → Shipped / Partially Shipped
 
 ---
 
-## 4. Partial fulfilment
+## 5. Partial fulfilment
 
 Status is tracked **per item**; the order header shows the aggregate.
 
@@ -77,7 +148,7 @@ The header reads **Partially** while any item is still outstanding, and resolves
 
 ---
 
-## 5. Business rules
+## 6. Business rules
 
 **BR-1 — No backward movement, scoped per item.**
 Once an *item* reaches any Complete sub-state, that item can never move back to Processing — including for measurement issues. The order header likewise never reverts from Complete to Processing. Items not yet shipped are unaffected and continue through Processing normally.
@@ -93,7 +164,7 @@ Recorded for reporting only; never changes order status.
 
 ---
 
-## 6. Transition matrix
+## 7. Transition matrix
 
 | From | Allowed next states |
 |---|---|
@@ -111,7 +182,7 @@ Recorded for reporting only; never changes order status.
 
 ---
 
-## 7. Terminology
+## 8. Terminology
 
 Use these exact terms throughout the codebase and UI:
 
